@@ -37,12 +37,4 @@ public class Movie implements Serializable {
     @Column(nullable = false)
     private Boolean winner;
 
-    public Movie(String title, String studios, String producers, Integer movieYear, Boolean winner) {
-        this.title = title;
-        this.studios = studios;
-        this.producers = producers;
-        this.movieYear = movieYear;
-        this.winner = winner;
-    }
-
 }
