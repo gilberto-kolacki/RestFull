@@ -24,8 +24,8 @@ public class ProducerService {
         AwardRangeMinMaxDto awardRangeMinMaxDto = new AwardRangeMinMaxDto();
         Set<String> producersMovies = this.getProducersListName();
         Set<ProducerYearsWinDto> producersYearsWin = this.getProducerYearsWin(producersMovies);
-        awardRangeMinMaxDto.setMin(this.searchMinIntervalAwards(producersYearsWin));
-        awardRangeMinMaxDto.setMax(this.searchMaxIntervalAwards(producersYearsWin));
+        awardRangeMinMaxDto.setMin(this.searchIntervalAwards(producersYearsWin, false));
+        awardRangeMinMaxDto.setMax(this.searchIntervalAwards(producersYearsWin, true));
         return awardRangeMinMaxDto;
     }
 
@@ -50,68 +50,60 @@ public class ProducerService {
         return producersNames;
     }
 
-    private Set<ProducerDto> searchMaxIntervalAwards(Set<ProducerYearsWinDto> producersYearsWin) {
+    private Set<ProducerDto> searchIntervalAwards(Set<ProducerYearsWinDto> producersYearsWin, boolean max) {
         Set<ProducerDto> producersMax = new HashSet<>();
         ProducerDto producer = null;
         for (ProducerYearsWinDto producerYearsWin : producersYearsWin) {
-            ProducerDto producerCurrent = this.searchIntervalYears(producerYearsWin.getYearsWin(), true);
-            if (producer != null) {
-                if (producer.getInterval() <= producerCurrent.getInterval()) {
-                    producersMax = producersMax.stream().filter((prod) -> prod.getInterval() >= producerCurrent.getInterval()).collect(Collectors.toSet());
+            Set<ProducerDto> producersCurrent = this.searchIntervalYears(producerYearsWin.getYearsWin(), max);
+            for (ProducerDto producerCurrent : producersCurrent) {
+                if (producer != null) {
+                    if (this.isValidInterval(producerCurrent.getInterval(), producer.getInterval(), max)) {
+                        producersMax = this.filterMaxMinInterval(producersMax, producerCurrent.getInterval(), max);
+                        producer = producerCurrent;
+                        producer.setProducer(producerYearsWin.getProducer());
+                        producersMax.add(producer);
+                    }
+                } else {
                     producer = producerCurrent;
                     producer.setProducer(producerYearsWin.getProducer());
                     producersMax.add(producer);
                 }
-            } else {
-                producer = producerCurrent;
-                producer.setProducer(producerYearsWin.getProducer());
-                producersMax.add(producer);
             }
         }
         return producersMax;
     }
 
-    private Set<ProducerDto> searchMinIntervalAwards(Set<ProducerYearsWinDto> producersYearsWin) {
-        Set<ProducerDto> producersMin = new HashSet<>();
-        ProducerDto producer = null;
-        for (ProducerYearsWinDto producerYearsWin : producersYearsWin) {
-            ProducerDto producerCurrent = this.searchIntervalYears(producerYearsWin.getYearsWin(), false);
-            if (producer != null) {
-                if (producer.getInterval() >= producerCurrent.getInterval()) {
-                    producersMin = producersMin.stream().filter((prod) -> prod.getInterval() <= producerCurrent.getInterval()).collect(Collectors.toSet());
-                    producer = producerCurrent;
-                    producer.setProducer(producerYearsWin.getProducer());
-                    producersMin.add(producer);
-                }
-            } else {
-                producer = producerCurrent;
-                producer.setProducer(producerYearsWin.getProducer());
-                producersMin.add(producer);
-            }
-        }
-        return producersMin;
-    }
-
-    public ProducerDto searchIntervalYears(Set<Integer> yearsWin, boolean max) {
-        ProducerDto producerDto = null;
+    public Set<ProducerDto> searchIntervalYears(Set<Integer> yearsWin, boolean max) {
+        Set<ProducerDto> producers = new HashSet<>();
+        int interval = 0;
         List<Integer> yearsList = yearsWin.stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList());
         for (int i = 0; i < yearsList.size(); i++) {
             try {
                 int next = i+1;
                 int intervalCurrent = yearsList.get(i) - yearsList.get(next);
-                producerDto = this.checkInterval(producerDto, intervalCurrent, yearsList.get(next), yearsList.get(i), max);
+                interval = this.checkInterval(producers, interval, intervalCurrent, yearsList.get(next), yearsList.get(i), max);
             } catch (IndexOutOfBoundsException ex) {
                 break;
             }
         }
-        return producerDto;
+        producers = this.filterMaxMinInterval(producers, interval, max);
+        return producers;
     }
 
-    private ProducerDto checkInterval(ProducerDto producerDto, int intervalCurrent, int previousWin, int followingWin, boolean max) {
-        if (producerDto == null || (max && producerDto.getInterval() <= intervalCurrent) || (!max && producerDto.getInterval() >= intervalCurrent)){
-            return new ProducerDto(intervalCurrent, previousWin, followingWin);
+    private int checkInterval(Set<ProducerDto> producers, int interval, int intervalCurrent, int previousWin, int followingWin, boolean max) {
+        if (interval == 0 || (max && interval <= intervalCurrent) || (!max && interval >= intervalCurrent)){
+            producers.add(new ProducerDto(intervalCurrent, previousWin, followingWin));
+            interval = intervalCurrent;
         }
-        return producerDto;
+        return interval;
+    }
+
+    private Set<ProducerDto> filterMaxMinInterval(Set<ProducerDto> producers, int interval, boolean max) {
+        return producers.stream().filter((prod) -> this.isValidInterval(prod.getInterval(), interval, max)).collect(Collectors.toSet());
+    }
+
+    public boolean isValidInterval(int intervalCurrent, int interval, boolean max) {
+        return (max && intervalCurrent >= interval) || (!max && intervalCurrent <= interval);
     }
 
 }

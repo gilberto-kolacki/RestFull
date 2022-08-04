@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
 class RestfullApplicationTests {
@@ -78,11 +79,25 @@ class RestfullApplicationTests {
 		year.add(2014);
 		year.add(2020);
 		year.add(2012);
+		year.add(1990);
 		year.add(2002);
-		ProducerDto producerMin = service.searchIntervalYears(year, false);
-		ProducerDto producerMax = service.searchIntervalYears(year, true);
-		assertEquals(2, producerMin.getInterval());
-		assertEquals(10, producerMax.getInterval());
+		year.add(2022);
+		Set<ProducerDto> producerMin = service.searchIntervalYears(year, false);
+		Set<ProducerDto> producerMax = service.searchIntervalYears(year, true);
+		assertEquals(2, producerMin.stream().findFirst().orElse(new ProducerDto()).getInterval());
+		assertEquals(3, producerMin.size());
+		assertEquals(10, producerMax.stream().findFirst().orElse(new ProducerDto()).getInterval());
+		assertEquals(2, producerMax.size());
+	}
+
+	@Test
+	public void testIsValidIntervalMin() {
+		assertTrue(service.isValidInterval(8, 10, false));
+	}
+
+	@Test
+	public void testIsValidIntervalMax() {
+		assertTrue(service.isValidInterval(10, 5, true));
 	}
 
 }
