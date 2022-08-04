@@ -1,6 +1,6 @@
 # API RESTful Golden Raspberry Awards
-## Build
-###Obrir o terminal.
+### Build
+### Abrir o terminal.
 Para gerar o .jar da aplicação, execute:
 
     ./mvnw clean package
